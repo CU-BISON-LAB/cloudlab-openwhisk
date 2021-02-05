@@ -25,11 +25,6 @@ wget https://github.com/apache/openwhisk-cli/releases/download/latest/OpenWhisk_
 tar -xvf OpenWhisk_CLI-latest-linux-386.tgz
 sudo mv wsk /usr/local/bin/wsk
 
-# Clone the Kubernetes OpenWhisk deployment repo, and move your yaml file to the
-# correct location.
-git clone https://github.com/apache/openwhisk-deploy-kube.git
-mv mycluster.yaml openwhisk-deploy-kube/mycluster.yaml
-
 # Packages needed for standalone openwhisk build
 sudo apt install -y nodejs npm default-jre
 
