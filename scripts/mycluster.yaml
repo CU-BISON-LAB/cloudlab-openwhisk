@@ -1,0 +1,15 @@
+whisk:
+  ingress:
+    type: NodePort
+    apiHostName: REPLACE_ME_WITH_IP
+    apiHostPort: 31001
+k8s:
+  persistence:
+    enabled: false
+nginx:
+  httpsNodePort: 31001
+invoker:
+  containerFactory:
+    impl: "kubernetes"
+    kubernetes:
+      replicaCount: REPLACE_ME_WITH_COUNT
