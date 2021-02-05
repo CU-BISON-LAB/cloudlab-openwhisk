@@ -40,7 +40,7 @@ for i in range(params.nodeCount):
     link_members.append(node)
 
     # Install and execute a script that is contained in the repository.
-    node.addService(pg.Execute(shell="sh", command="/local/repository/silly.sh"))
+    node.addService(rspec.Execute(shell="sh", command="/local/repository/silly.sh"))
     
 # Create a link between nodes
 link1 = request.Link(members = link_members)
