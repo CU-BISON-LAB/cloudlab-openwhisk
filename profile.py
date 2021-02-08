@@ -35,12 +35,12 @@ link_members = []
 # Create nodes
 for i in range(params.nodeCount):
     node = request.RawPC("node"+str(i+1))
-    node.disk_image = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk:1'
+    node.disk_image = 'urn:publicid:IDN+emulab.net+image+emulab-ops:UBUNTU20-64-STD'
     node.hardware_type = params.nodeType
     link_members.append(node)
 
     # Install and execute a script that is contained in the repository.
-    node.addService(rspec.Execute(shell="sh", command="/local/repository/silly.sh"))
+    # node.addService(rspec.Execute(shell="sh", command="/local/repository/silly.sh"))
     
 # Create a link between nodes
 link1 = request.Link(members = link_members)
