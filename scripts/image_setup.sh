@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Unlike home directories, this directory will be included in the image
+INSTALL_DIR=/home/openwhisk-kubernetes
+
 # Install docker
 sudo apt update
 sudo apt install -y docker.io
@@ -32,17 +35,17 @@ sudo ./get_helm.sh
 
 # Create directory and clone the OpenWhisk Kubernetes Deployment repo
 sudo groupadd owk8s
-sudo mkdir /home/openwhisk-kubernetes
-sudo git clone https://github.com/apache/openwhisk-deploy-kube.git /home/openwhisk-kubernetes/openwhisk-deploy-kube
-sudo cp my_cluster.yaml /home/openwhisk-kubernetes/my_cluster.yaml
+sudo mkdir $INSTALL_DIR
+sudo git clone https://github.com/apache/openwhisk-deploy-kube.git $INSTALL_DIR/openwhisk-deploy-kube
+sudo cp mycluster.yaml $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
 
 # Prepare to install calico (<50 nodes version)
-cd /home/openwhisk-kubernetes
+cd $INSTALL_DIR
 sudo curl https://docs.projectcalico.org/manifests/calico.yaml -O
 
 # Fix permissions
-sudo chgrp -R owk8s /home/openwhisk-kubernetes
-sudo chmod -R o+rw /home/openwhisk-kubernetes
+sudo chgrp -R owk8s $INSTALL_DIR
+sudo chmod -R o+rw $INSTALL_DIR
 
 # Download and install the OpenWhisk CLI
 wget https://github.com/apache/openwhisk-cli/releases/download/latest/OpenWhisk_CLI-latest-linux-386.tgz
