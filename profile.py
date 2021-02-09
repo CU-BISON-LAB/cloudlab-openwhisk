@@ -30,19 +30,21 @@ if params.nodeCount > 50:
     pass
 pc.verifyParameters()
 
-link_members = []
+nodes = []
 
 # Create nodes
 for i in range(params.nodeCount):
     node = request.RawPC("node"+str(i+1))
     node.disk_image = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk'
     node.hardware_type = params.nodeType
-    link_members.append(node)
-
-    # Install and execute a script that is contained in the repository.
-    # node.addService(rspec.Execute(shell="sh", command="/local/repository/silly.sh"))
+    nodes.append(node)
     
 # Create a link between nodes
-link1 = request.Link(members = link_members)
+link1 = request.Link(members = nodes)
+
+for i, node in enumerate(nodes[1:]):
+    node.addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh secondary 10.10.1.{} > /home/openwhisk-kubernetes/start_k8s.log".format(i + 1))
+
+nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh primary 10.10.1.1 > /home/openwhisk-kubernetes/start_k8s.log")
 
 portal.context.printRequestRSpec()
