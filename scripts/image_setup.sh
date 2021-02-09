@@ -33,7 +33,8 @@ sudo ./get_helm.sh
 # Create directory and clone the OpenWhisk Kubernetes Deployment repo
 sudo groupadd owk8s
 sudo mkdir /home/openwhisk-kubernetes
-sudo git clone https://github.com/apache/openwhisk-deploy-kube.git /home/openwhisk-kubernetes
+sudo git clone https://github.com/apache/openwhisk-deploy-kube.git /home/openwhisk-kubernetes/openwhisk-deploy-kube
+sudo cp my_cluster.yaml /home/openwhisk-kubernetes/my_cluster.yaml
 
 # Prepare to install calico (<50 nodes version)
 cd /home/openwhisk-kubernetes
