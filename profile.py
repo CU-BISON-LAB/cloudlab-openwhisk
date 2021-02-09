@@ -12,7 +12,7 @@ request = portal.context.makeRequestRSpec()
 # Set up parameters
 pc = portal.Context()
 pc.defineParameter("nodeCount", 
-                   "Number of nodes in the experiment. It is recommended that at least 3 be used for the Kubernetes/OpenWhisk ",
+                   "Number of nodes in the experiment. It is recommended that at least 3 be used.",
                    portal.ParameterType.INTEGER, 
                    3
 )
@@ -24,8 +24,8 @@ pc.defineParameter("nodeType",
 params = pc.bindParameters()
 
 # Verify parameters
-if params.nodeCount > 10:
-    perr = portal.ParameterWarning("Do you really need more than 8 compute nodes?  Think of your fellow users scrambling to get nodes :).",['nodeCount'])
+if params.nodeCount > 50:
+    perr = portal.ParameterWarning("The calico CNI installed is meant to handle only 50 nodes, max :( Consider creating a new profile for larger clusters.",['nodeCount'])
     pc.reportWarning(perr)
     pass
 pc.verifyParameters()
@@ -35,7 +35,7 @@ link_members = []
 # Create nodes
 for i in range(params.nodeCount):
     node = request.RawPC("node"+str(i+1))
-    node.disk_image = 'urn:publicid:IDN+emulab.net+image+emulab-ops:UBUNTU20-64-STD'
+    node.disk_image = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk'
     node.hardware_type = params.nodeType
     link_members.append(node)
 
