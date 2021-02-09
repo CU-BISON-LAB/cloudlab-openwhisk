@@ -34,6 +34,12 @@ sudo ./get_helm.sh
 sudo groupadd owk8s
 sudo mkdir /home/openwhisk-kubernetes
 sudo git clone https://github.com/apache/openwhisk-deploy-kube.git /home/openwhisk-kubernetes
+
+# Prepare to install calico (<50 nodes version)
+cd /home/openwhisk-kubernetes
+sudo curl https://docs.projectcalico.org/manifests/calico.yaml -O
+
+# Fix permissions
 sudo chgrp -R owk8s /home/openwhisk-kubernetes
 sudo chmod -R o+rw /home/openwhisk-kubernetes
 
