@@ -27,7 +27,8 @@ setup_secondary() {
     echo "> Waiting for command to join kubernetes cluster"
     while read -r cmd; do
         case $cmd in
-            *) MY_CMD=$cmd && break ;;
+            k) MY_CMD=$cmd && break ;;
+            *) ;;
         esac
     done <&"${COPROC[0]}"
 
