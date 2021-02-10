@@ -30,9 +30,10 @@ setup_secondary() {
         case $cmd in
             *"kube"*)
                 MY_CMD=$cmd
-                break ;;
+                break 
+                ;;
             *)
-                echo "Ignoring: $cmd"
+                ;;
         esac
     done
 
