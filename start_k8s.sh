@@ -27,18 +27,21 @@ setup_secondary() {
     echo "> Waiting for command to join kubernetes cluster"
     while read -r cmd; do
         case $cmd in
-            k) MY_CMD=$cmd && break ;;
-            *) ;;
+            *"kube"*)
+                MY_CMD=$cmd
+                break ;;
+            *)
+                echo "Ignoring: $cmd"
         esac
     done <&"${COPROC[0]}"
 
     # Remove forward slash, since original command was on two lines
-    NEW_CMD=$(echo sudo $MY_CMD | sed 's/\\//')
+    MY_CMD=$(echo sudo $MY_CMD | sed 's/\\//')
 
-    echo "> Command to execute is: $NEW_CMD"
+    echo "> Command to execute is: $MY_CMD"
 
     # run command to join kubernetes cluster
-    eval $NEW_CMD
+    eval $MY_CMD
     echo "Done!"
 
     # Client terminates, so we don't need to.
