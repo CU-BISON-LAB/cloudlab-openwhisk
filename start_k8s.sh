@@ -25,7 +25,8 @@ setup_secondary() {
     coproc nc -l $1 $SECONDARY_PORT
 
     echo "> Waiting for command to join kubernetes cluster"
-    while read -r cmd; do
+    while true; do
+        read -ru ${COPROC[0]} cmd
         case $cmd in
             *"kube"*)
                 MY_CMD=$cmd
@@ -33,7 +34,7 @@ setup_secondary() {
             *)
                 echo "Ignoring: $cmd"
         esac
-    done <&"${COPROC[0]}"
+    done
 
     # Remove forward slash, since original command was on two lines
     MY_CMD=$(echo sudo $MY_CMD | sed 's/\\//')
