@@ -1,5 +1,5 @@
 """
-TODO: write directions.
+TODO: Not finished yet, use owk8s profile in the meantime
 """
 import time
 
@@ -15,18 +15,42 @@ pc = portal.Context()
 pc.defineParameter("nodeCount", 
                    "Number of nodes in the experiment. It is recommended that at least 3 be used.",
                    portal.ParameterType.INTEGER, 
-                   3
-)
+                   3)
 pc.defineParameter("nodeType", 
                    "Node Hardware Type",
                    portal.ParameterType.NODETYPE, 
                    "m510",
                    longDescription="A specific hardware type to use for all nodes. This profile has primarily been tested with m510 and xl170 nodes.")
+
+pc.defineParameter("startKubernetes",
+                   "Create Kubernetes cluster",
+                   portal.ParameterType.BOOLEAN,
+                   True)
+pc.defineParameter("deployOpenWhisk",
+                   "Deploy OpenWhisk",
+                   portal.ParameterType.BOOLEAN,
+                   True)
+pc.defineParameter("helmTests",
+                   "Run helm tests (recommended if deploying OpenWhisk",
+                   portal.ParameterType.BOOLEAN,
+                   True)
+pc.defineParameter("manualTests",
+                   "Run manual OpenWhisk tests (recommended if deploying OpenWhisk",
+                   portal.ParameterType.BOOLEAN,
+                   True)
 params = pc.bindParameters()
 
 # Verify parameters
 if params.nodeCount > 50:
     perr = portal.ParameterWarning("The calico CNI installed is meant to handle only 50 nodes, max :( Consider creating a new profile for larger clusters.",['nodeCount'])
+    pc.reportWarning(perr)
+    pass
+if not params.startKuberntes and (params.deployOpenWhisk or params.helmTests or params.manualTests):
+    perr = portal.ParameterWarning("The Kubernetes Cluster must be created in order to deploy OpenWhisk and run tests",['startKubernetes'])
+    pc.reportWarning(perr)
+    pass
+if not params.deployOpenWhisk and (params.helmTests or params.manualTests):
+    perr = portal.ParameterWarning("OpenWhisk must be deployed in order to run tests",['deployOpenWhisk'])
     pc.reportWarning(perr)
     pass
 pc.verifyParameters()
@@ -46,5 +70,6 @@ link1 = request.Link(members = nodes)
 for i, node in enumerate(nodes[1:]):
     node.addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh secondary 10.10.1.{} > /home/openwhisk-kubernetes/start_k8s.log &".format(i + 2)))
 
-nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh primary 10.10.1.1 {} > /home/openwhisk-kubernetes/start_k8s.log".format(params.nodeCount)))
+nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh primary 10.10.1.1 {} {} {} {} {}> /home/openwhisk-kubernetes/start_k8s.log".format(
+  params.nodeCount, params.startKuberentes, params.deployOpenwhisk, params.helmTests, params.manualTests)))
 portal.context.printRequestRSpec()
