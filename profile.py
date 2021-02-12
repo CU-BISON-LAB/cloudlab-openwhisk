@@ -45,7 +45,7 @@ if params.nodeCount > 50:
     perr = portal.ParameterWarning("The calico CNI installed is meant to handle only 50 nodes, max :( Consider creating a new profile for larger clusters.",['nodeCount'])
     pc.reportWarning(perr)
     pass
-if not params.startKuberntes and (params.deployOpenWhisk or params.helmTests or params.manualTests):
+if not params.startKubernetes and (params.deployOpenWhisk or params.helmTests or params.manualTests):
     perr = portal.ParameterWarning("The Kubernetes Cluster must be created in order to deploy OpenWhisk and run tests",['startKubernetes'])
     pc.reportWarning(perr)
     pass
