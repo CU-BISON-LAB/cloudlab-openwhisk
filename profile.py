@@ -71,5 +71,5 @@ for i, node in enumerate(nodes[1:]):
     node.addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh secondary 10.10.1.{} > /home/openwhisk-kubernetes/start_k8s.log &".format(i + 2)))
 
 nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh primary 10.10.1.1 {} {} {} {} {}> /home/openwhisk-kubernetes/start_k8s.log".format(
-  params.nodeCount, params.startKuberentes, params.deployOpenwhisk, params.helmTests, params.manualTests)))
+  params.nodeCount, params.startKubernetes, params.deployOpenwhisk, params.helmTests, params.manualTests)))
 portal.context.printRequestRSpec()
