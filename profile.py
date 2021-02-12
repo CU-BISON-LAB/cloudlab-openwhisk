@@ -65,10 +65,10 @@ for i in range(params.nodeCount):
 link1 = request.Link(members = nodes)
 
 for i, node in enumerate(nodes[1:]):
-    node.addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh secondary 10.10.1.{} {} > /home/openwhisk-kubernetes/start_k8s.log &".format(
+    node.addService(rspec.Execute(shell="bash", command="/local/repository/start.sh secondary 10.10.1.{} {} > /home/openwhisk-kubernetes/start.log &".format(
       i + 2, params.startKubernetes)))
 
-nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh primary 10.10.1.1 {} {} {} {} {} > /home/openwhisk-kubernetes/start_k8s.log".format(
+nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary 10.10.1.1 {} {} {} {} {} > /home/openwhisk-kubernetes/start.log".format(
   params.nodeCount, params.startKubernetes, params.deployOpenWhisk, params.helmTests, params.manualTests)))
 
 
