@@ -95,13 +95,21 @@ add_cluster_nodes() {
     REMOTE_CMD=$(tail -n 2 $INSTALL_DIR/k8s_install.log)
     printf "%s: %s\n" "$(date)" "Remote command is: $REMOTE_CMD"
 
-    for (( i=2; i<=$1; i++ ))
-    do
-        SECONDARY_IP=$BASE_IP$i
-        echo $SECONDARY_IP
-        exec 3<>/dev/tcp/$SECONDARY_IP/$SECONDARY_PORT
-        echo $REMOTE_CMD 1>&3
-        exec 3<&-
+    NUM_REGISTERED=$(kubectl get nodes | wc -l)
+    NUM_REGISTERED=$(($1-NUM_REGISTERED))
+    counter=0
+    while [ "$NUM_REGISTERED" -ne 0 ]
+    do 
+        printf "%s: %s" "$(date)" "Registering nodes, attempt #$counter"
+        for (( i=2; i<=$1; i++ ))
+        do
+            SECONDARY_IP=$BASE_IP$i
+            echo $SECONDARY_IP
+            exec 3<>/dev/tcp/$SECONDARY_IP/$SECONDARY_PORT
+            echo $REMOTE_CMD 1>&3
+            exec 3<&-
+        done
+	counter=$((counter+1))
     done
 
     printf "%s: %s\n" "$(date)" "Waiting for all nodes to have status of 'Ready': "
@@ -118,7 +126,12 @@ add_cluster_nodes() {
 }
 
 # Start by recording the arguments
-printf "%s: args='%s'\n" "$(date)" $@
+printf "%s: args=(" "$(date)"
+for var in "$@"
+do
+    printf "'%s' " "$var"
+done
+printf ")\n"
 
 # Check the min number of arguments
 if [ $# -lt $NUM_MIN_ARGS ]; then

@@ -29,11 +29,11 @@ pc.defineParameter("deployOpenWhisk",
                    portal.ParameterType.BOOLEAN,
                    True)
 pc.defineParameter("helmTests",
-                   "Run helm tests (recommended if deploying OpenWhisk",
+                   "Run helm tests (recommended if deploying OpenWhisk)",
                    portal.ParameterType.BOOLEAN,
                    True)
 pc.defineParameter("manualTests",
-                   "Run manual OpenWhisk tests (recommended if deploying OpenWhisk",
+                   "Run manual OpenWhisk tests (recommended if deploying OpenWhisk)",
                    portal.ParameterType.BOOLEAN,
                    True)
 params = pc.bindParameters()
@@ -55,6 +55,8 @@ request = pc.makeRequestRSpec()
 nodes = []
 
 # Create nodes
+# The start script relies on the idea that the primary node is 10.10.1.1, and subsequent nodes follow the
+# pattern 10.10.1.2, 10.10.1.3, ...
 for i in range(params.nodeCount):
     node = request.RawPC("node"+str(i+1))
     node.disk_image = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk'
