@@ -8,8 +8,6 @@ import geni.portal as portal
 # Import the ProtoGENI library.
 import geni.rspec.pg as rspec
 
-request = portal.context.makeRequestRSpec()
-
 # Set up parameters
 pc = portal.Context()
 pc.defineParameter("nodeCount", 
@@ -43,17 +41,16 @@ params = pc.bindParameters()
 # Verify parameters
 if params.nodeCount > 50:
     perr = portal.ParameterWarning("The calico CNI installed is meant to handle only 50 nodes, max :( Consider creating a new profile for larger clusters.",['nodeCount'])
-    pc.reportWarning(perr)
-    pass
+    pc.reportError(perr)
 if not params.startKubernetes and (params.deployOpenWhisk or params.helmTests or params.manualTests):
     perr = portal.ParameterWarning("The Kubernetes Cluster must be created in order to deploy OpenWhisk and run tests",['startKubernetes'])
-    pc.reportWarning(perr)
-    pass
+    pc.reportError(perr)
 if not params.deployOpenWhisk and (params.helmTests or params.manualTests):
     perr = portal.ParameterWarning("OpenWhisk must be deployed in order to run tests",['deployOpenWhisk'])
-    pc.reportWarning(perr)
-    pass
+    pc.reportError(perr)
+    
 pc.verifyParameters()
+request = pc.makeRequestRSpec()
 
 nodes = []
 
@@ -73,4 +70,6 @@ for i, node in enumerate(nodes[1:]):
 
 nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start_k8s.sh primary 10.10.1.1 {} {} {} {} {} > /home/openwhisk-kubernetes/start_k8s.log".format(
   params.nodeCount, params.startKubernetes, params.deployOpenWhisk, params.helmTests, params.manualTests)))
-portal.context.printRequestRSpec()
+
+
+pc.printRequestRSpec()
