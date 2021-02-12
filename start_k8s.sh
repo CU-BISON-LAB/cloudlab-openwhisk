@@ -3,11 +3,11 @@
 BASE_IP="10.10.1."
 SECONDARY_PORT=3000
 INSTALL_DIR=/home/openwhisk-kubernetes
-NUM_MIN_ARGS=2
+NUM_MIN_ARGS=3
 PRIMARY_ARG="primary"
 SECONDARY_ARG="secondary"
 NUM_PRIMARY_ARGS=7
-USAGE=$'Usage:\n\t./start.sh secondary <node_ip>\n\t./start.sh primary <node_ip> <num_nodes>'
+USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk> <run_helm_tests> <run_manual_tests>'
 
 disable_swap() {
     # Turn swap off and comment out swap line in /etc/fstab
@@ -142,6 +142,13 @@ sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.
 
 # At this point, a secondary node is fully configured until it is time for the node to join the cluster.
 if [ $1 == $SECONDARY_ARG ] ; then
+
+   # Exit early if we don't need to start Kubernetes
+   if [ $3 -eq "False" ]; then
+      echo "Start Kubernetes is $3, done!"
+      exit 0
+   fi
+
     setup_secondary $2
     exit 0
 fi
@@ -151,6 +158,12 @@ if [ $# -ne $NUM_PRIMARY_ARGS ]; then
     echo "***Error: Expected at least $NUM_PRIMARY_ARGS arguments."
     echo "$USAGE"
     exit -1
+fi
+
+# Exit early if we don't need to start Kubernetes
+if [ $4 -eq "False" ]; then
+    echo "Start Kubernetes is $4, done!"
+    exit 0
 fi
 
 # Finish setting up the primary node
