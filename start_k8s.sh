@@ -6,7 +6,7 @@ INSTALL_DIR=/home/openwhisk-kubernetes
 NUM_MIN_ARGS=2
 PRIMARY_ARG="primary"
 SECONDARY_ARG="secondary"
-NUM_PRIMARY_ARGS=3
+NUM_PRIMARY_ARGS=7
 USAGE=$'Usage:\n\t./start.sh secondary <node_ip>\n\t./start.sh primary <node_ip> <num_nodes>'
 
 disable_swap() {
