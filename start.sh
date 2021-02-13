@@ -127,6 +127,59 @@ add_cluster_nodes() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
 }
 
+prepare_for_openwhisk() {
+    # Iterate over each node and set the openwhisk role
+    # From https://superuser.com/questions/284187/bash-iterating-over-lines-in-a-variable
+    NODE_NAMES=$(kubectl get nodes -o name)
+    while IFS= read -r line; do
+        kubectl label nodes ${line:5} openwhisk-role=invoker
+        if [ $? -ne 0 ]; then
+            echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
+            exit 1
+        fi
+    done <<< "$NODE_NAMES"
+    printf "%s: %s\n" "$(date +"%T.%N")" "Labelled all nodes as invoker nodes."
+
+    kubectl create namespace openwhisk
+    if [ $? -ne 0 ]; then
+        echo "***Error: Failed to create openwhisk namespace"
+        exit 1
+    fi
+    printf "%s: %s\n" "$(date +"%T.%N")" "Created openwhisk namespace in Kubernetes."
+
+    sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$1/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    sudo sed -i.bak "s/REPLACE_ME_WITH_COUNT/$2/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    printf "%s: %s\n" "$(date +"%T.%N")" "Added actual primary node IP to $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml"
+}
+
+deploy_openwhisk() {
+
+    # Deploy openwhisk via helm
+    printf "%s: %s\n" "$(date +"%T.%N")" "About to deploy OpenWhisk via Helm... "
+    cd $INSTALL_DIR/openwhisk-deploy-kube
+    helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml > $INSTALL_DIR/helm_install.log
+    if [ $? -eq 0 ]; then
+        printf "%s: %s\n" "$(date +"%T.%N")" "Ran helm command to deploy OpenWhisk"
+    else
+        echo ""
+        echo "***Error: Helm install error. Please check $INSTALL_DIR/helm_install.log."
+        exit 1
+    fi
+    cd $INSTALL_DIR
+
+    # Monitor pods until openwhisk is fully deployed
+    sudo kubectl get pods -n openwhisk
+    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for OpenWhisk to complete deploying (this can take several minutes): "
+    DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
+    while [ "$DEPLOY_COMPLETE" -ne 1 ]
+    do
+        sleep 5
+        printf "."
+        DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
+    done
+    printf "%s: %s\n" "$(date +"%T.%N")" "OpenWhisk deployed!"
+}
+
 # Start by recording the arguments
 printf "%s: args=(" "$(date +"%T.%N")"
 for var in "$@"
@@ -186,11 +239,23 @@ fi
 
 # Finish setting up the primary node
 # Argument is node_ip
-#setup_primary $2
+setup_primary $2
 
 # Apply calico networking
-#apply_calico
+apply_calico
 
 # Coordinate master to add nodes to the kubernetes cluster
 # Argument is number of secondary nodes
 add_cluster_nodes $3
+
+# Exit early if we don't need to deploy OpenWhisk
+if [ "$5" = "False" ]; then
+    printf "%s: %s\n" "$(date +"%T.%N")" "Deploy Openwhisk is $4, done!"
+    exit 0
+fi
+
+# Prepare cluster to deploy OpenWhisk, takes IP and node num
+prepare_for_openwhisk $2 $3
+
+# Deploy OpenWhisk via Helm
+deploy_openwhisk
