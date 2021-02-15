@@ -6,8 +6,8 @@ INSTALL_DIR=/home/openwhisk-kubernetes
 NUM_MIN_ARGS=3
 PRIMARY_ARG="primary"
 SECONDARY_ARG="secondary"
-NUM_PRIMARY_ARGS=7
-USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk> <run_helm_tests> <run_manual_tests>'
+NUM_PRIMARY_ARGS=6
+USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk> <num_invokers>'
 
 disable_swap() {
     # Turn swap off and comment out swap line in /etc/fstab
@@ -100,6 +100,7 @@ add_cluster_nodes() {
     counter=0
     while [ "$NUM_REGISTERED" -ne 0 ]
     do 
+	sleep 2
         printf "%s: %s\n" "$(date +"%T.%N")" "Registering nodes, attempt #$counter, registered=$NUM_REGISTERED"
         for (( i=2; i<=$1; i++ ))
         do
@@ -130,13 +131,27 @@ add_cluster_nodes() {
 prepare_for_openwhisk() {
     # Iterate over each node and set the openwhisk role
     # From https://superuser.com/questions/284187/bash-iterating-over-lines-in-a-variable
+
     NODE_NAMES=$(kubectl get nodes -o name)
+    CORE_NODES=$(($2-$3))
+    counter=0
     while IFS= read -r line; do
-        kubectl label nodes ${line:5} openwhisk-role=invoker
-        if [ $? -ne 0 ]; then
-            echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
-            exit 1
-        fi
+	if [ $counter -lt $CORE_NODES ] ; then
+	    printf "%s: %s\n" "$(date +"%T.%N")" "Labelled ${line:5} as openwhisk core node"
+	    kubectl label nodes ${line:5} openwhisk-role=core
+            if [ $? -ne 0 ]; then
+                echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
+                exit -1
+            fi
+        else
+	    printf "%s: %s\n" "$(date +"%T.%N")" "Labelled ${line:5} as openwhisk invoker node"
+            kubectl label nodes ${line:5} openwhisk-role=invoker
+            if [ $? -ne 0 ]; then
+                echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
+                exit -1
+            fi
+	fi
+	counter=$((counter+1))
     done <<< "$NODE_NAMES"
     printf "%s: %s\n" "$(date +"%T.%N")" "Labelled all nodes as invoker nodes."
 
@@ -148,7 +163,7 @@ prepare_for_openwhisk() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Created openwhisk namespace in Kubernetes."
 
     sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$1/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
-    sudo sed -i.bak "s/REPLACE_ME_WITH_COUNT/$2/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    sudo sed -i.bak "s/REPLACE_ME_WITH_COUNT/$3/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
     printf "%s: %s\n" "$(date +"%T.%N")" "Added actual primary node IP to $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml"
 }
 
@@ -173,11 +188,12 @@ deploy_openwhisk() {
     DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
     while [ "$DEPLOY_COMPLETE" -ne 1 ]
     do
-        sleep 5
-        printf "."
+        sleep 2
         DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "OpenWhisk deployed!"
+    wsk property set --apihost $1:31001
+    wsk property set --auth 23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
 }
 
 # Start by recording the arguments
@@ -245,7 +261,7 @@ setup_primary $2
 apply_calico
 
 # Coordinate master to add nodes to the kubernetes cluster
-# Argument is number of secondary nodes
+# Argument is number of nodes
 add_cluster_nodes $3
 
 # Exit early if we don't need to deploy OpenWhisk
@@ -254,8 +270,14 @@ if [ "$5" = "False" ]; then
     exit 0
 fi
 
-# Prepare cluster to deploy OpenWhisk, takes IP and node num
-prepare_for_openwhisk $2 $3
+# Exit early if num invokers exceeds number of nodes
+if [ $3 -lt $6 ] ; then
+    printf "%s: %s\n" "$(date +"%T.%N")" "Error - number of invokers exceeds number of nodes."
+    exit -1
+fi
+
+# Prepare cluster to deploy OpenWhisk, takes IP and node num and num invokers
+prepare_for_openwhisk $2 $3 $6
 
 # Deploy OpenWhisk via Helm
-deploy_openwhisk
+deploy_openwhisk $2

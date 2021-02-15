@@ -1,6 +1,21 @@
 """
-TODO: Not finished yet, use owk8s profile in the meantime
+To set up user permissions regarding Kubernetes, after you log in on the primary node (node1),
+run the following script: 
+    /local/repository/user_setup.sh
+
+After running that script, get information on the kubernetes cluster using normal kubectl commands, eg.,
+    kubectl get nodes.
+
+To see information on OpenWhisk pods, make sure to specify the namespace as openwhisk. To remove OpenWhisk,
+run the following commands:
+    cd /home/openwhisk-kuberntes/openwhisk-deploy-kube
+    helm uninstall owdev -n openwhisk
+After the helm uninstall, there may be orphan action containers which should be removed via kubectl.
+
+To see output from the startup script on both primary and secondary nodes, run:
+    cat /home/openwhisk-kubernetes/start.log
 """
+
 import time
 
 # Import the Portal object.
@@ -23,32 +38,36 @@ pc.defineParameter("nodeType",
 pc.defineParameter("startKubernetes",
                    "Create Kubernetes cluster",
                    portal.ParameterType.BOOLEAN,
-                   True)
+                   True,
+                   longDescription="Create a Kubernetes cluster using default image setup (calico networking, etc.)")
 pc.defineParameter("deployOpenWhisk",
                    "Deploy OpenWhisk",
                    portal.ParameterType.BOOLEAN,
-                   True)
-pc.defineParameter("helmTests",
-                   "Run helm tests (recommended if deploying OpenWhisk)",
-                   portal.ParameterType.BOOLEAN,
-                   True)
-pc.defineParameter("manualTests",
-                   "Run manual OpenWhisk tests (recommended if deploying OpenWhisk)",
-                   portal.ParameterType.BOOLEAN,
-                   True)
+                   True,
+                   longDescription="Use helm to deploy OpenWhisk.")
+pc.defineParameter("numInvokers",
+                   "Number of Invokers",
+                   portal.ParameterType.INTEGER,
+                   1,
+                   longDescription="Number of OpenWhisk invokers set in the mycluster.yaml file, and number of nodes labelled as Openwhisk invokers. " \
+                           "All nodes which are not invokers will be labelled as OpenWhisk core nodes.")
 params = pc.bindParameters()
 
 # Verify parameters
 if params.nodeCount > 50:
     perr = portal.ParameterWarning("The calico CNI installed is meant to handle only 50 nodes, max :( Consider creating a new profile for larger clusters.",['nodeCount'])
     pc.reportError(perr)
-if not params.startKubernetes and (params.deployOpenWhisk or params.helmTests or params.manualTests):
-    perr = portal.ParameterWarning("The Kubernetes Cluster must be created in order to deploy OpenWhisk and run tests",['startKubernetes'])
+if not params.startKubernetes and params.deployOpenWhisk:
+    perr = portal.ParameterWarning("The Kubernetes Cluster must be created in order to deploy OpenWhisk",['startKubernetes'])
     pc.reportError(perr)
-if not params.deployOpenWhisk and (params.helmTests or params.manualTests):
-    perr = portal.ParameterWarning("OpenWhisk must be deployed in order to run tests",['deployOpenWhisk'])
+if not params.deployOpenWhisk and params.numInvokers != 1:
+    perr = portal.ParameterWarning("Number of invokers set to default value, but OpenWhisk will not be deployed. Number of invokers has no meaning if OpenWhisk is not deployed.", 
+            ["numInvokers"])
     pc.reportError(perr)
-    
+if params.numInvokers > params.nodeCount:
+    perr = portal.ParameterWarning("Number of invokers must be less than or equal to the total number of nodes.", ["numInvokers"])
+    pc.reportError(perr)
+
 pc.verifyParameters()
 request = pc.makeRequestRSpec()
 
@@ -70,8 +89,8 @@ for i, node in enumerate(nodes[1:]):
     node.addService(rspec.Execute(shell="bash", command="/local/repository/start.sh secondary 10.10.1.{} {} > /home/openwhisk-kubernetes/start.log &".format(
       i + 2, params.startKubernetes)))
 
-nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary 10.10.1.1 {} {} {} {} {} > /home/openwhisk-kubernetes/start.log".format(
-  params.nodeCount, params.startKubernetes, params.deployOpenWhisk, params.helmTests, params.manualTests)))
+nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary 10.10.1.1 {} {} {} {} > /home/openwhisk-kubernetes/start.log".format(
+  params.nodeCount, params.startKubernetes, params.deployOpenWhisk, params.numInvokers)))
 
 
 pc.printRequestRSpec()
