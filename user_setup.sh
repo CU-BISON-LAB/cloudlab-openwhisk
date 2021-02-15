@@ -1,9 +1,13 @@
 #!/bin/bash
 
-# set up kubectl 
+# set up kubectl (so can run kubectl commands without sudo)
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# set up docker (so can run docker commands without sudo)
+sudo usermod -aG docker $USER
+newgrp docker 
 
 # set up wsk
 wsk property set --apihost 10.10.1.1:31001
