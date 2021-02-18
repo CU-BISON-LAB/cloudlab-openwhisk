@@ -1,24 +1,12 @@
-"""
+""" Ubuntu 20.04 Optional Kubernetes Cluster w/ OpenWhisk optionally deployed with a parameterized
+number of nodes and OpenWhisk invokers.
+
+Instructions:
 Note: It can take upwards of 10 min. for the cluster to fully initialize. Thank you for your patience!
-
 For full documentation, see the GitHub repo: https://github.com/CU-BISON-LAB/cloudlab-openwhisk
-
 To set up user permissions regarding Kubernetes, after you log in on the primary node (node1),
-run the following script: $ /local/repository/user_setup.sh
-
-After running that script, get information on the kubernetes cluster using normal kubectl commands, e.g.,
-$ kubectl get nodes
-
-To see information on OpenWhisk pods, make sure to specify the namespace as openwhisk. To remove OpenWhisk,
-run the following commands:
-    
-   $ cd /home/openwhisk-kuberntes/openwhisk-deploy-kube
-    
-   $ helm uninstall owdev -n openwhisk
-
-After the helm uninstall, there may be orphan action containers which should be removed via kubectl.
-
-To see output from the startup script on both primary and secondary nodes, run: $ cat /home/openwhisk-kubernetes/start.log
+run the following script: $ /local/repository/user_setup.sh. To see output from the startup script 
+on both primary and secondary nodes, run: $ cat /home/openwhisk-kubernetes/start.log
 """
 
 import time
