@@ -49,7 +49,7 @@ pc.defineParameter("extraStorage",
                    portal.ParameterType.BOOLEAN,
                    False,
                    longDescription="Mount the temporary file system at the /mydata mount point; Configure docker to store images here. This is useful " \
-                   for OpenWhisk development.")
+                            "for OpenWhisk development.")
 params = pc.bindParameters()
 
 # Verify parameters
