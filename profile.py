@@ -44,6 +44,12 @@ pc.defineParameter("numInvokers",
                    1,
                    longDescription="Number of OpenWhisk invokers set in the mycluster.yaml file, and number of nodes labelled as Openwhisk invokers. " \
                            "All nodes which are not invokers will be labelled as OpenWhisk core nodes.")
+pc.defineParameter("extraStorage", 
+                   "Temporary filesystem mount point for docker image storage on all nodes",
+                   portal.ParameterType.BOOLEAN,
+                   False,
+                   longDescription="Mount the temporary file system at the /mydata mount point; Configure docker to store images here. This is useful " \
+                   for OpenWhisk development.")
 params = pc.bindParameters()
 
 # Verify parameters
@@ -70,11 +76,16 @@ nodes = []
 # The start script relies on the idea that the primary node is 10.10.1.1, and subsequent nodes follow the
 # pattern 10.10.1.2, 10.10.1.3, ...
 for i in range(params.nodeCount):
-    node = request.RawPC("node"+str(i+1))
+    name = "node"+str(i+1)
+    node = request.RawPC(name)
     node.disk_image = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk'
     node.hardware_type = params.nodeType
+    if params.extraStorage:
+        bs = node.Blockstore(name + "-bs", "/mydata")
+        bs.size = "0GB"
+        bs.placement = "any"
     nodes.append(node)
-    
+
 # Create a link between nodes
 link1 = request.Link(members = nodes)
 
