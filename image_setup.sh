@@ -51,3 +51,6 @@ sudo chmod -R o+rw $INSTALL_DIR
 wget https://github.com/apache/openwhisk-cli/releases/download/latest/OpenWhisk_CLI-latest-linux-386.tgz
 tar -xvf OpenWhisk_CLI-latest-linux-386.tgz
 sudo mv wsk /usr/local/bin/wsk
+
+# In order to use wskdev commands, need to run this:
+sudo apt install python
