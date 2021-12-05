@@ -20,7 +20,7 @@ $ sudo apt upgrade
 $ sudo apt autoremove
 ```
 
-Run the ```setup_image.sh``` script. In an ideal world this would do everything, but there's a few manual steps that aren't scripted at this point.
+Run the ```setup_image.sh``` script.
 
 We want to be sure that we use the CloudLab experimental interface and not the control interface within our Kubernetes cluster. To do so, edit ```/etc/systemd/system/kubelet.service.d/10-kubeadm.conf``` to be as below:
 
