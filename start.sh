@@ -1,15 +1,20 @@
 #!/bin/bash
 
+set -x
+
 BASE_IP="10.10.1."
 SECONDARY_PORT=3000
-INSTALL_DIR=/home/openwhisk-kubernetes
+INSTALL_DIR=/home/cloudlab-openwhisk
 NUM_MIN_ARGS=3
 PRIMARY_ARG="primary"
 SECONDARY_ARG="secondary"
-NUM_PRIMARY_ARGS=6
-USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk> <num_invokers>'
+USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk>'
+NUM_PRIMARY_ARGS=5
+OW_GROUP="owuser"
 
 configure_docker_storage() {
+    printf "%s: %s\n" "$(date +"%T.%N")" "Configuring docker storage"
+    sudo mkdir /mydata/docker
     echo -e '{
         "exec-opts": ["native.cgroupdriver=systemd"],
         "log-driver": "json-file",
@@ -19,7 +24,17 @@ configure_docker_storage() {
         "storage-driver": "overlay2",
         "data-root": "/mydata/docker"
     }' | sudo tee /etc/docker/daemon.json
+    sudo systemctl restart docker || (echo "ERROR: Docker installation failed, exiting." && exit -1)
+    sudo docker run hello-world | grep "Hello from Docker!" || (echo "ERROR: Docker installation failed, exiting." && exit -1)
     printf "%s: %s\n" "$(date +"%T.%N")" "Configured docker storage to use mountpoint"
+}
+
+setup_docker() {
+    # Add all users to docker group
+    for FILE in /users/*; do
+        CURRENT_USER=${FILE##*/}
+        sudo gpasswd -a $CURRENT_USER docker
+    done
 }
 
 disable_swap() {
@@ -35,19 +50,24 @@ disable_swap() {
 }
 
 setup_secondary() {
-    coproc nc -l $1 $SECONDARY_PORT
-
-    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for command to join kubernetes cluster"
+    coproc nc { nc -l $1 $SECONDARY_PORT; }
     while true; do
-        read -ru ${COPROC[0]} cmd
+        printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for command to join kubernetes cluster, nc pid is $nc_PID"
+        read -r -u${nc[0]} cmd
         case $cmd in
             *"kube"*)
                 MY_CMD=$cmd
                 break 
                 ;;
             *)
+	    	printf "%s: %s\n" "$(date +"%T.%N")" "Read: $cmd"
                 ;;
         esac
+	if [ -z "$nc_PID" ]
+	then
+	    printf "%s: %s\n" "$(date +"%T.%N")" "Restarting listener via netcat..."
+	    coproc nc { nc -l $1 $SECONDARY_PORT; }
+	fi
     done
 
     # Remove forward slash, since original command was on two lines
@@ -58,15 +78,12 @@ setup_secondary() {
     # run command to join kubernetes cluster
     eval $MY_CMD
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
-
-    # Client terminates, so we don't need to.
-    # kill "$COPROC_PID"
 }
 
 setup_primary() {
     # initialize k8 primary node
     printf "%s: %s\n" "$(date +"%T.%N")" "Starting Kubernetes... (this can take several minutes)... "
-    sudo kubeadm init --apiserver-advertise-address=$1 --pod-network-cidr=10.11.0.0/16 > $INSTALL_DIR/k8s_install.log 2>&1
+    sudo kubeadm init --apiserver-advertise-address=$1 > $INSTALL_DIR/k8s_install.log 2>&1
     if [ $? -eq 0 ]; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Done! Output in $INSTALL_DIR/k8s_install.log"
     else
@@ -75,10 +92,14 @@ setup_primary() {
         exit 1
     fi
 
-    # set up kubectl 
-    mkdir -p $HOME/.kube
-    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    # Set up kubectl for all users
+    for FILE in /users/*; do
+        CURRENT_USER=${FILE##*/}
+	sudo gpasswd -a $CURRENT_USER $OW_GROUP
+        mkdir -p /home/$CURRENT_USER/.kube
+        sudo cp -i /etc/kubernetes/admin.conf /home/$CURRENT_USER/.kube/config
+        sudo chown $CURRENT_USER:$OW_GROUP /home/$CURRENT_USER/.kube/config
+    done
 
     # wait until all pods are started except 2 (the DNS pods)
     NUM_PENDING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Pending | wc -l)
@@ -95,14 +116,20 @@ setup_primary() {
 }
 
 apply_calico() {
-    kubectl apply -f $INSTALL_DIR/calico.yaml > $INSTALL_DIR/calico_install.txt
+    kubectl apply -f /local/repository/calico/tigera-operator.yaml 2>&1 > $INSTALL_DIR/calico_tigera_install.txt
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_install.txt"
+       echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_tigera_install.txt"
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in $INSTALL_DIR/calico.yaml. Install log found in $INSTALL_DIR/calico_install.log"
-}
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/tigera-operator.yaml. Install log found in $INSTALL_DIR/calico_tigera_install.log"
 
+    kubectl apply -f /local/repository/calico/custom-resources.yaml 2>&1 > $INSTALL_DIR/calico_resources_install.txt
+    if [ $? -ne 0 ]; then
+       echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_resources_install.txt"
+       exit 1
+    fi
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/custom-resources.yaml. Install log found in $INSTALL_DIR/calico_resources_install.log"
+}
 
 add_cluster_nodes() {
     REMOTE_CMD=$(tail -n 2 $INSTALL_DIR/k8s_install.log)
