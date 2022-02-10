@@ -49,7 +49,7 @@ sudo sed -i.bak "s/KUBELET_CONFIG_ARGS=--config=\/var\/lib\/kubelet\/config\.yam
 sudo sed '6 i Environment="cgroup-driver=systemd/cgroup-driver=cgroupfs"' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 # Install Python3, just because
-sudo add-apt-repository ppa:deadsnakes/ppa
+sudo add-apt-repository -y ppa:deadsnakes/ppa
 sudo apt update -y
 sudo apt install -y python3.7
 sudo apt install -y python3-pip
