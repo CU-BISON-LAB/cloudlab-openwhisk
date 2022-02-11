@@ -126,7 +126,7 @@ apply_calico() {
 
     kubectl apply -f /local/repository/calico/custom-resources.yaml
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_resources_install.txt"
+       echo "***Error: Error when applying calico networking."
        exit 1
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/custom-resources.yaml."
