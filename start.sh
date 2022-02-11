@@ -96,9 +96,9 @@ setup_primary() {
     for FILE in /users/*; do
         CURRENT_USER=${FILE##*/}
 	sudo gpasswd -a $CURRENT_USER $OW_GROUP
-        mkdir -p /home/$CURRENT_USER/.kube
-        sudo cp -i /etc/kubernetes/admin.conf /home/$CURRENT_USER/.kube/config
-        sudo chown $CURRENT_USER:$OW_GROUP /home/$CURRENT_USER/.kube/config
+        mkdir -p /users/$CURRENT_USER/.kube
+        sudo cp -i /etc/kubernetes/admin.conf /users/$CURRENT_USER/.kube/config
+        sudo chown $CURRENT_USER:$OW_GROUP /users/$CURRENT_USER/.kube/config
     done
 
     # wait until all pods are started except 2 (the DNS pods)
@@ -116,6 +116,7 @@ setup_primary() {
 }
 
 apply_calico() {
+    # from: https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart
     kubectl apply -f /local/repository/calico/tigera-operator.yaml 2>&1 > $INSTALL_DIR/calico_tigera_install.txt
     if [ $? -ne 0 ]; then
        echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_tigera_install.txt"
@@ -129,6 +130,12 @@ apply_calico() {
        exit 1
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/custom-resources.yaml. Install log found in $INSTALL_DIR/calico_resources_install.log"
+
+    # wait for calico pods to start
+    sleep 60
+    
+    # remove taint from master
+    kubectl taint nodes --all node-role.kubernetes.io/master-
 }
 
 add_cluster_nodes() {
@@ -173,10 +180,9 @@ prepare_for_openwhisk() {
     # From https://superuser.com/questions/284187/bash-iterating-over-lines-in-a-variable
 
     NODE_NAMES=$(kubectl get nodes -o name)
-    CORE_NODES=$(($2-$3))
     counter=0
     while IFS= read -r line; do
-	if [ $counter -lt $CORE_NODES ] ; then
+	if [ $counter -lt 1 ] ; then
 	    printf "%s: %s\n" "$(date +"%T.%N")" "Labelled ${line:5} as openwhisk core node"
 	    kubectl label nodes ${line:5} openwhisk-role=core
             if [ $? -ne 0 ]; then
@@ -202,10 +208,11 @@ prepare_for_openwhisk() {
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Created openwhisk namespace in Kubernetes."
 
-    sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$1/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
-    sudo sed -i.bak "s/REPLACE_ME_WITH_COUNT/$3/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    cp /local/repository/mycluster.yaml $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    sed -i.bak "s/REPLACE_ME_WITH_IP/$1/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
     printf "%s: %s\n" "$(date +"%T.%N")" "Added actual primary node IP to $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml"
 }
+
 
 deploy_openwhisk() {
 
@@ -223,7 +230,7 @@ deploy_openwhisk() {
     cd $INSTALL_DIR
 
     # Monitor pods until openwhisk is fully deployed
-    sudo kubectl get pods -n openwhisk
+    kubectl get pods -n openwhisk
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for OpenWhisk to complete deploying (this can take several minutes): "
     DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
     while [ "$DEPLOY_COMPLETE" -ne 1 ]
@@ -232,8 +239,15 @@ deploy_openwhisk() {
         DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "OpenWhisk deployed!"
-    wsk property set --apihost $1:31001
-    wsk property set --auth 23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
+    
+    # Set up wsk properties for all users
+    for FILE in /users/*; do
+        CURRENT_USER=${FILE##*/}
+        echo -e '
+	APIHOST=:31001
+	AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
+	' | tee /users/$CURRENT_USER/.wskprops
+    done
 }
 
 # Start by recording the arguments
@@ -257,9 +271,6 @@ if [ $1 != $PRIMARY_ARG -a $1 != $SECONDARY_ARG ] ; then
     echo "$USAGE"
     exit -1
 fi
-
-# Do common things that are necessary for both primary and secondary nodes
-sudo usermod -a -G owk8s $USER
 
 # Kubernetes does not support swap, so we must disable it
 disable_swap
@@ -315,14 +326,8 @@ if [ "$5" = "False" ]; then
     exit 0
 fi
 
-# Exit early if num invokers exceeds number of nodes
-if [ $3 -lt $6 ] ; then
-    printf "%s: %s\n" "$(date +"%T.%N")" "Error - number of invokers exceeds number of nodes."
-    exit -1
-fi
-
 # Prepare cluster to deploy OpenWhisk, takes IP and node num and num invokers
-prepare_for_openwhisk $2 $3 $6
+prepare_for_openwhisk $2
 
 # Deploy OpenWhisk via Helm
 deploy_openwhisk $2
