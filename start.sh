@@ -116,26 +116,34 @@ setup_primary() {
 }
 
 apply_calico() {
-    # from: https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart
-    kubectl apply -f /local/repository/calico/tigera-operator.yaml
+    # https://projectcalico.docs.tigera.io/getting-started/kubernetes/helm
+    helm repo add projectcalico https://projectcalico.docs.tigera.io/charts
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when applying calico networking."
+       echo "***Error: Error when loading helm calico repo."
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/tigera-operator.yaml."
+    printf "%s: %s\n" "$(date +"%T.%N")" "Loaded helm calico repo"
 
-    kubectl apply -f /local/repository/calico/custom-resources.yaml
+    helm install calico projectcalico/tigera-operator --version v3.22.0
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when applying calico networking."
+       echo "***Error: Error when installing calico with helm."
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/custom-resources.yaml."
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking from "
 
-    # wait for calico pods to start
-    sleep 60
-    
-    # remove taint from master
-    kubectl taint nodes --all node-role.kubernetes.io/master-
+    # wait for calico pods to be in ready state
+    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for calico pods to have status of 'Running': "
+    NUM_PODS=$(kubectl get pods -n calico-system | wc -l)
+    NUM_RUNNING=$(kubectl get pods -n calico-system | grep " Running" | wc -l)
+    NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
+    while [ "$NUM_RUNNING" -ne 0 ]
+    do
+        sleep 1
+        printf "."
+        NUM_RUNNING=$(kubectl get pods -n calico-system | grep " Running" | wc -l)
+        NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
+    done
+    printf "%s: %s\n" "$(date +"%T.%N")" "Calico running!"
 }
 
 add_cluster_nodes() {
@@ -163,7 +171,7 @@ add_cluster_nodes() {
     done
 
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for all nodes to have status of 'Ready': "
-    NUM_READY=$(kubectl get nodes | grep Ready | wc -l)
+    NUM_READY=$(kubectl get nodes | grep " Ready" | wc -l)
     NUM_READY=$(($1-NUM_READY))
     while [ "$NUM_READY" -ne 0 ]
     do
