@@ -75,7 +75,3 @@ sudo chmod -R o+rw $INSTALL_DIR
 
 # Download openwhisk-deploy-kube repo - customized to this deployment
 git clone https://github.com/apache/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube
-
-# Prepare to install calico (<50 nodes version)
-cd $INSTALL_DIR
-sudo curl https://docs.projectcalico.org/manifests/calico.yaml -O
