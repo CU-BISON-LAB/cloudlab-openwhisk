@@ -169,7 +169,7 @@ add_cluster_nodes() {
     do
         sleep 1
         printf "."
-        NUM_READY=$(kubectl get nodes | grep Ready | wc -l)
+        NUM_READY=$(kubectl get nodes | grep " Ready" | wc -l)
         NUM_READY=$(($1-NUM_READY))
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
