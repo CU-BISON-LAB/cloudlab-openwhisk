@@ -10,7 +10,7 @@ sudo apt-get update
 sudo apt install -y nodejs npm default-jre default-jdk
 
 # In order to use wskdev commands, need to run this:
-sudo apt install python
+sudo apt install -y python
 
 # Install docker (https://docs.docker.com/engine/install/ubuntu/)
 sudo apt-get update
