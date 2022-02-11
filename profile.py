@@ -15,7 +15,8 @@ import geni.portal as portal
 # Import the ProtoGENI library.
 import geni.rspec.pg as rspec
 
-BASE_IP="10.10.1"
+BASE_IP = "10.10.1"
+BANDWIDTH = 10000000
 
 # Set up parameters
 pc = portal.Context()
@@ -60,7 +61,7 @@ if not params.startKubernetes and params.deployOpenWhisk:
 pc.verifyParameters()
 request = pc.makeRequestRSpec()
 
-def create_node(name, nodes):
+def create_node(name, nodes, lan):
   # Create node
   node = request.RawPC(name)
   node.disk_image = "urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk1.5.0"
@@ -80,6 +81,8 @@ def create_node(name, nodes):
   nodes.append(node)
 
 nodes = []
+lan = request.LAN()
+lan.bandwidth = BANDWIDTH
 
 # Create nodes
 # The start script relies on the idea that the primary node is 10.10.1.1, and subsequent nodes follow the
@@ -87,9 +90,6 @@ nodes = []
 for i in range(params.nodeCount):
     name = "ow"+str(i+1)
     create_node(name, nodes)
-
-# Create a link between nodes
-link1 = request.Link(members = nodes)
 
 # Iterate over secondary nodes first
 for i, node in enumerate(nodes[1:]):
