@@ -117,19 +117,19 @@ setup_primary() {
 
 apply_calico() {
     # from: https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart
-    kubectl apply -f /local/repository/calico/tigera-operator.yaml 2>&1 > $INSTALL_DIR/calico_tigera_install.txt
+    kubectl apply -f /local/repository/calico/tigera-operator.yaml
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_tigera_install.txt"
+       echo "***Error: Error when applying calico networking."
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/tigera-operator.yaml. Install log found in $INSTALL_DIR/calico_tigera_install.log"
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/tigera-operator.yaml."
 
-    kubectl apply -f /local/repository/calico/custom-resources.yaml 2>&1 > $INSTALL_DIR/calico_resources_install.txt
+    kubectl apply -f /local/repository/calico/custom-resources.yaml
     if [ $? -ne 0 ]; then
        echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_resources_install.txt"
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/custom-resources.yaml. Install log found in $INSTALL_DIR/calico_resources_install.log"
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in /local/repository/calico/custom-resources.yaml."
 
     # wait for calico pods to start
     sleep 60
