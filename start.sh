@@ -82,7 +82,7 @@ setup_secondary() {
 setup_primary() {
     # initialize k8 primary node
     printf "%s: %s\n" "$(date +"%T.%N")" "Starting Kubernetes... (this can take several minutes)... "
-    sudo kubeadm init --apiserver-advertise-address=$1 > $INSTALL_DIR/k8s_install.log 2>&1
+    sudo kubeadm init --apiserver-advertise-address=$1 2>&1 > $INSTALL_DIR/k8s_install.log
     if [ $? -eq 0 ]; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Done! Output in $INSTALL_DIR/k8s_install.log"
     else
@@ -227,7 +227,7 @@ deploy_openwhisk() {
     # Deploy openwhisk via helm
     printf "%s: %s\n" "$(date +"%T.%N")" "About to deploy OpenWhisk via Helm... "
     cd $INSTALL_DIR/openwhisk-deploy-kube
-    helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml > $INSTALL_DIR/helm_install.log
+    helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml 2>&1 > $INSTALL_DIR/helm_install.log
     if [ $? -eq 0 ]; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Ran helm command to deploy OpenWhisk"
     else
