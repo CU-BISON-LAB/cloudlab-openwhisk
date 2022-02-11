@@ -92,12 +92,13 @@ setup_primary() {
     fi
 
     # Set up kubectl for all users
+    groupadd $OW_GROUP
     for FILE in /users/*; do
         CURRENT_USER=${FILE##*/}
 	sudo gpasswd -a $CURRENT_USER $OW_GROUP
-        sudo mkdir -p /users/$CURRENT_USER/.kube
+        sudo mkdir /users/$CURRENT_USER/.kube
         sudo cp -i /etc/kubernetes/admin.conf /users/$CURRENT_USER/.kube/config
-        sudo chown -r $CURRENT_USER:$OW_GROUP /users/$CURRENT_USER/.kube
+        sudo chown -R $CURRENT_USER:$OW_GROUP /users/$CURRENT_USER/.kube
     done
 
     # wait until all pods are started except 2 (the DNS pods)
