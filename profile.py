@@ -97,7 +97,7 @@ for i, node in enumerate(nodes[1:]):
       BASE_IP, i + 2, params.startKubernetes)))
 
 # Start primary node
-nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary {}.1 {} {} {} {} > /home/openwhisk-kubernetes/start.log".format(
+nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary {}.1 {} {} {} > /home/openwhisk-kubernetes/start.log".format(
   BASE_IP, params.nodeCount, params.startKubernetes, params.deployOpenWhisk)))
 
 
