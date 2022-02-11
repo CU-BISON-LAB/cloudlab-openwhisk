@@ -9,7 +9,7 @@ PRIMARY_ARG="primary"
 SECONDARY_ARG="secondary"
 USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk>'
 NUM_PRIMARY_ARGS=5
-OW_GROUP="owuser"
+PROFILE_GROUP="profileuser"
 
 configure_docker_storage() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Configuring docker storage"
@@ -92,13 +92,11 @@ setup_primary() {
     fi
 
     # Set up kubectl for all users
-    groupadd $OW_GROUP
     for FILE in /users/*; do
         CURRENT_USER=${FILE##*/}
-	sudo gpasswd -a $CURRENT_USER $OW_GROUP
         sudo mkdir /users/$CURRENT_USER/.kube
         sudo cp -i /etc/kubernetes/admin.conf /users/$CURRENT_USER/.kube/config
-        sudo chown -R $CURRENT_USER:$OW_GROUP /users/$CURRENT_USER/.kube
+        sudo chown -R $CURRENT_USER:$PROFILE_GROUP /users/$CURRENT_USER/.kube
     done
 
     # wait until all pods are started except 2 (the DNS pods)
@@ -287,6 +285,15 @@ disable_swap
 if test -f "/mydata"; then
     configure_docker_storage
 fi
+
+# Fix permissions of install dir, add group for all users to set permission of shared files correctly
+groupadd $PROFILE_GROUP
+for FILE in /users/*; do
+    CURRENT_USER=${FILE##*/}
+    sudo gpasswd -a $CURRENT_USER $PROFILE_GROUP
+done
+sudo chown -R $USER:$PROFILE_GROUP $INSTALL_DIR
+chmod -R g+rw $INSTALL_DIR
 
 # Use second argument (node IP) to replace filler in kubeadm configuration
 sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
