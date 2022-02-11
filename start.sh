@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -x
-
 BASE_IP="10.10.1."
 SECONDARY_PORT=3000
 INSTALL_DIR=/home/cloudlab-openwhisk
