@@ -89,7 +89,7 @@ lan.bandwidth = BANDWIDTH
 # pattern 10.10.1.2, 10.10.1.3, ...
 for i in range(params.nodeCount):
     name = "ow"+str(i+1)
-    create_node(name, nodes)
+    create_node(name, nodes, lan)
 
 # Iterate over secondary nodes first
 for i, node in enumerate(nodes[1:]):
