@@ -17,6 +17,7 @@ import geni.rspec.pg as rspec
 
 BASE_IP = "10.10.1"
 BANDWIDTH = 10000000
+IMAGE = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhiskv2'
 
 # Set up parameters
 pc = portal.Context()
@@ -64,7 +65,7 @@ request = pc.makeRequestRSpec()
 def create_node(name, nodes, lan):
   # Create node
   node = request.RawPC(name)
-  node.disk_image = "urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhisk1.5.0"
+  node.disk_image = IMAGE
   node.hardware_type = params.nodeType
   
   # Add interface
