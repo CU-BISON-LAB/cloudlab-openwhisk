@@ -102,7 +102,7 @@ setup_primary() {
     # wait until all pods are started except 2 (the DNS pods)
     NUM_PENDING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Pending | wc -l)
     NUM_RUNNING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Running | wc -l)
-    printf "%s: %s\n" "$(date +"%T.%N")" "> Waiting for pods to start up: "
+    printf "%s: %s\n" "$(date +"%T.%N")" "> Waiting for kube-system pods to start up: "
     while [ "$NUM_PENDING" -ne 2 ] && [ "$NUM_RUNNING" -ne 5 ]
     do
         sleep 1
