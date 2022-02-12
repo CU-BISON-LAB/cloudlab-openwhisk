@@ -277,13 +277,13 @@ if test -f "/mydata"; then
 fi
 
 # Fix permissions of install dir, add group for all users to set permission of shared files correctly
-groupadd $PROFILE_GROUP
+sudo groupadd $PROFILE_GROUP
 for FILE in /users/*; do
     CURRENT_USER=${FILE##*/}
     sudo gpasswd -a $CURRENT_USER $PROFILE_GROUP
 done
 sudo chown -R $USER:$PROFILE_GROUP $INSTALL_DIR
-chmod -R g+rw $INSTALL_DIR
+sudo chmod -R g+rw $INSTALL_DIR
 
 # Use second argument (node IP) to replace filler in kubeadm configuration
 sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
