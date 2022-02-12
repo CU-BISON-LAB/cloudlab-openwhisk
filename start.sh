@@ -95,20 +95,10 @@ setup_primary() {
     for FILE in /users/*; do
         CURRENT_USER=${FILE##*/}
         sudo mkdir /users/$CURRENT_USER/.kube
-        sudo cp -i /etc/kubernetes/admin.conf /users/$CURRENT_USER/.kube/config
+        sudo cp /etc/kubernetes/admin.conf /users/$CURRENT_USER/.kube/config
         sudo chown -R $CURRENT_USER:$PROFILE_GROUP /users/$CURRENT_USER/.kube
-    done
-
-    # wait until all pods are started except 2 (the DNS pods)
-    NUM_PENDING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Pending | wc -l)
-    NUM_RUNNING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Running | wc -l)
-    printf "%s: %s\n" "$(date +"%T.%N")" "> Waiting for kube-system pods to start up: "
-    while [ "$NUM_PENDING" -ne 2 ] && [ "$NUM_RUNNING" -ne 5 ]
-    do
-        sleep 1
-        printf "."
-        NUM_PENDING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Pending | wc -l)
-        NUM_RUNNING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Running | wc -l)
+	printf "%s: %s\n" "$(date +"%T.%N")" "set /users/$CURRENT_USER/.kube to $CURRENT_USER:$PROFILE_GROUP!"
+	ls -lah /users/$CURRENT_USER/.kube
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
 }
