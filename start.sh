@@ -337,3 +337,5 @@ prepare_for_openwhisk $2
 
 # Deploy OpenWhisk via Helm
 deploy_openwhisk $2
+
+printf "%s: %s\n" "$(date +"%T.%N")" "Profile setup completed!"
