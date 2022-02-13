@@ -28,14 +28,6 @@ configure_docker_storage() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Configured docker storage to use mountpoint"
 }
 
-setup_docker() {
-    # Add all users to docker group
-    for FILE in /users/*; do
-        CURRENT_USER=${FILE##*/}
-        sudo gpasswd -a $CURRENT_USER docker
-    done
-}
-
 disable_swap() {
     # Turn swap off and comment out swap line in /etc/fstab
     sudo swapoff -a
@@ -277,11 +269,14 @@ if test -f "/mydata"; then
     configure_docker_storage
 fi
 
+# All all users to the docker group
+
 # Fix permissions of install dir, add group for all users to set permission of shared files correctly
 sudo groupadd $PROFILE_GROUP
 for FILE in /users/*; do
     CURRENT_USER=${FILE##*/}
     sudo gpasswd -a $CURRENT_USER $PROFILE_GROUP
+    sudo gpasswd -a $CURRENT_USER docker
 done
 sudo chown -R $USER:$PROFILE_GROUP $INSTALL_DIR
 sudo chmod -R g+rw $INSTALL_DIR
