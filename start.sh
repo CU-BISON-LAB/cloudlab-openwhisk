@@ -240,7 +240,7 @@ deploy_openwhisk() {
     for FILE in /users/*; do
         CURRENT_USER=${FILE##*/}
         echo -e '
-	APIHOST=:31001
+	APIHOST=$1:31001
 	AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
 	' | sudo tee /users/$CURRENT_USER/.wskprops
 	sudo chown $CURRENT_USER:$PROFILE_GROUP /users/$CURRENT_USER/.wskprops
