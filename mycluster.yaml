@@ -11,5 +11,3 @@ nginx:
 invoker:
   containerFactory:
     impl: "kubernetes"
-    kubernetes:
-      replicaCount: REPLACE_ME_WITH_COUNT

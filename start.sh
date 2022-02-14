@@ -1,15 +1,19 @@
 #!/bin/bash
 
+set -x
 BASE_IP="10.10.1."
 SECONDARY_PORT=3000
-INSTALL_DIR=/home/openwhisk-kubernetes
+INSTALL_DIR=/home/cloudlab-openwhisk
 NUM_MIN_ARGS=3
 PRIMARY_ARG="primary"
 SECONDARY_ARG="secondary"
-NUM_PRIMARY_ARGS=6
-USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk> <num_invokers>'
+USAGE=$'Usage:\n\t./start.sh secondary <node_ip> <start_kubernetes>\n\t./start.sh primary <node_ip> <num_nodes> <start_kubernetes> <deploy_openwhisk>'
+NUM_PRIMARY_ARGS=5
+PROFILE_GROUP="profileuser"
 
 configure_docker_storage() {
+    printf "%s: %s\n" "$(date +"%T.%N")" "Configuring docker storage"
+    sudo mkdir /mydata/docker
     echo -e '{
         "exec-opts": ["native.cgroupdriver=systemd"],
         "log-driver": "json-file",
@@ -19,6 +23,8 @@ configure_docker_storage() {
         "storage-driver": "overlay2",
         "data-root": "/mydata/docker"
     }' | sudo tee /etc/docker/daemon.json
+    sudo systemctl restart docker || (echo "ERROR: Docker installation failed, exiting." && exit -1)
+    sudo docker run hello-world | grep "Hello from Docker!" || (echo "ERROR: Docker installation failed, exiting." && exit -1)
     printf "%s: %s\n" "$(date +"%T.%N")" "Configured docker storage to use mountpoint"
 }
 
@@ -35,19 +41,24 @@ disable_swap() {
 }
 
 setup_secondary() {
-    coproc nc -l $1 $SECONDARY_PORT
-
-    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for command to join kubernetes cluster"
+    coproc nc { nc -l $1 $SECONDARY_PORT; }
     while true; do
-        read -ru ${COPROC[0]} cmd
+        printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for command to join kubernetes cluster, nc pid is $nc_PID"
+        read -r -u${nc[0]} cmd
         case $cmd in
             *"kube"*)
                 MY_CMD=$cmd
                 break 
                 ;;
             *)
+	    	printf "%s: %s\n" "$(date +"%T.%N")" "Read: $cmd"
                 ;;
         esac
+	if [ -z "$nc_PID" ]
+	then
+	    printf "%s: %s\n" "$(date +"%T.%N")" "Restarting listener via netcat..."
+	    coproc nc { nc -l $1 $SECONDARY_PORT; }
+	fi
     done
 
     # Remove forward slash, since original command was on two lines
@@ -58,9 +69,6 @@ setup_secondary() {
     # run command to join kubernetes cluster
     eval $MY_CMD
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
-
-    # Client terminates, so we don't need to.
-    # kill "$COPROC_PID"
 }
 
 setup_primary() {
@@ -75,34 +83,48 @@ setup_primary() {
         exit 1
     fi
 
-    # set up kubectl 
-    mkdir -p $HOME/.kube
-    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-    # wait until all pods are started except 2 (the DNS pods)
-    NUM_PENDING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Pending | wc -l)
-    NUM_RUNNING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Running | wc -l)
-    printf "%s: %s\n" "$(date +"%T.%N")" "> Waiting for pods to start up: "
-    while [ "$NUM_PENDING" -ne 2 ] && [ "$NUM_RUNNING" -ne 5 ]
-    do
-        sleep 1
-        printf "."
-        NUM_PENDING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Pending | wc -l)
-        NUM_RUNNING=$(kubectl get pods -o wide --all-namespaces 2>&1 | grep Running | wc -l)
+    # Set up kubectl for all users
+    for FILE in /users/*; do
+        CURRENT_USER=${FILE##*/}
+        sudo mkdir /users/$CURRENT_USER/.kube
+        sudo cp /etc/kubernetes/admin.conf /users/$CURRENT_USER/.kube/config
+        sudo chown -R $CURRENT_USER:$PROFILE_GROUP /users/$CURRENT_USER/.kube
+	printf "%s: %s\n" "$(date +"%T.%N")" "set /users/$CURRENT_USER/.kube to $CURRENT_USER:$PROFILE_GROUP!"
+	ls -lah /users/$CURRENT_USER/.kube
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
 }
 
 apply_calico() {
-    kubectl apply -f $INSTALL_DIR/calico.yaml > $INSTALL_DIR/calico_install.txt
+    # https://projectcalico.docs.tigera.io/getting-started/kubernetes/helm
+    helm repo add projectcalico https://projectcalico.docs.tigera.io/charts > $INSTALL_DIR/calico_install.log 2>&1 
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when applying calico networking. Check log found in $INSTALL_DIR/calico_install.txt"
+       echo "***Error: Error when loading helm calico repo. Log written to $INSTALL_DIR/calico_install.log"
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking found in $INSTALL_DIR/calico.yaml. Install log found in $INSTALL_DIR/calico_install.log"
-}
+    printf "%s: %s\n" "$(date +"%T.%N")" "Loaded helm calico repo"
 
+    helm install calico projectcalico/tigera-operator --version v3.22.0 >> $INSTALL_DIR/calico_install.log 2>&1
+    if [ $? -ne 0 ]; then
+       echo "***Error: Error when installing calico with helm. Log appended to $INSTALL_DIR/calico_install.log"
+       exit 1
+    fi
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking from "
+
+    # wait for calico pods to be in ready state
+    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for calico pods to have status of 'Running': "
+    NUM_PODS=$(kubectl get pods -n calico-system | wc -l)
+    NUM_RUNNING=$(kubectl get pods -n calico-system | grep " Running" | wc -l)
+    NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
+    while [ "$NUM_RUNNING" -ne 0 ]
+    do
+        sleep 1
+        printf "."
+        NUM_RUNNING=$(kubectl get pods -n calico-system | grep " Running" | wc -l)
+        NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
+    done
+    printf "%s: %s\n" "$(date +"%T.%N")" "Calico running!"
+}
 
 add_cluster_nodes() {
     REMOTE_CMD=$(tail -n 2 $INSTALL_DIR/k8s_install.log)
@@ -129,13 +151,13 @@ add_cluster_nodes() {
     done
 
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for all nodes to have status of 'Ready': "
-    NUM_READY=$(kubectl get nodes | grep Ready | wc -l)
+    NUM_READY=$(kubectl get nodes | grep " Ready" | wc -l)
     NUM_READY=$(($1-NUM_READY))
     while [ "$NUM_READY" -ne 0 ]
     do
         sleep 1
         printf "."
-        NUM_READY=$(kubectl get nodes | grep Ready | wc -l)
+        NUM_READY=$(kubectl get nodes | grep " Ready" | wc -l)
         NUM_READY=$(($1-NUM_READY))
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
@@ -146,10 +168,9 @@ prepare_for_openwhisk() {
     # From https://superuser.com/questions/284187/bash-iterating-over-lines-in-a-variable
 
     NODE_NAMES=$(kubectl get nodes -o name)
-    CORE_NODES=$(($2-$3))
     counter=0
     while IFS= read -r line; do
-	if [ $counter -lt $CORE_NODES ] ; then
+	if [ $counter -lt 1 ] ; then
 	    printf "%s: %s\n" "$(date +"%T.%N")" "Labelled ${line:5} as openwhisk core node"
 	    kubectl label nodes ${line:5} openwhisk-role=core
             if [ $? -ne 0 ]; then
@@ -175,28 +196,31 @@ prepare_for_openwhisk() {
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Created openwhisk namespace in Kubernetes."
 
-    sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$1/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
-    sudo sed -i.bak "s/REPLACE_ME_WITH_COUNT/$3/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    cp /local/repository/mycluster.yaml $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    sed -i.bak "s/REPLACE_ME_WITH_IP/$1/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    sudo chown $USER:$PROFILE_GROUP $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
+    sudo chmod -R g+rw $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
     printf "%s: %s\n" "$(date +"%T.%N")" "Added actual primary node IP to $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml"
 }
+
 
 deploy_openwhisk() {
 
     # Deploy openwhisk via helm
     printf "%s: %s\n" "$(date +"%T.%N")" "About to deploy OpenWhisk via Helm... "
     cd $INSTALL_DIR/openwhisk-deploy-kube
-    helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml > $INSTALL_DIR/helm_install.log
+    helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml > $INSTALL_DIR/ow_install.log 2>&1 
     if [ $? -eq 0 ]; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Ran helm command to deploy OpenWhisk"
     else
         echo ""
-        echo "***Error: Helm install error. Please check $INSTALL_DIR/helm_install.log."
+        echo "***Error: Helm install error. Please check $INSTALL_DIR/ow_install.log."
         exit 1
     fi
     cd $INSTALL_DIR
 
     # Monitor pods until openwhisk is fully deployed
-    sudo kubectl get pods -n openwhisk
+    kubectl get pods -n openwhisk
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for OpenWhisk to complete deploying (this can take several minutes): "
     DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
     while [ "$DEPLOY_COMPLETE" -ne 1 ]
@@ -205,8 +229,16 @@ deploy_openwhisk() {
         DEPLOY_COMPLETE=$(kubectl get pods -n openwhisk | grep owdev-install-packages | grep Completed | wc -l)
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "OpenWhisk deployed!"
-    wsk property set --apihost $1:31001
-    wsk property set --auth 23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
+    
+    # Set up wsk properties for all users
+    for FILE in /users/*; do
+        CURRENT_USER=${FILE##*/}
+        echo -e "
+	APIHOST=$1:31001
+	AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
+	" | sudo tee /users/$CURRENT_USER/.wskprops
+	sudo chown $CURRENT_USER:$PROFILE_GROUP /users/$CURRENT_USER/.wskprops
+    done
 }
 
 # Start by recording the arguments
@@ -231,16 +263,25 @@ if [ $1 != $PRIMARY_ARG -a $1 != $SECONDARY_ARG ] ; then
     exit -1
 fi
 
-# Do common things that are necessary for both primary and secondary nodes
-sudo usermod -a -G owk8s $USER
-
 # Kubernetes does not support swap, so we must disable it
 disable_swap
 
 # Use mountpoint (if it exists) to set up additional docker image storage
-if test -f "/mydata"; then
+if test -d "/mydata"; then
     configure_docker_storage
 fi
+
+# All all users to the docker group
+
+# Fix permissions of install dir, add group for all users to set permission of shared files correctly
+sudo groupadd $PROFILE_GROUP
+for FILE in /users/*; do
+    CURRENT_USER=${FILE##*/}
+    sudo gpasswd -a $CURRENT_USER $PROFILE_GROUP
+    sudo gpasswd -a $CURRENT_USER docker
+done
+sudo chown -R $USER:$PROFILE_GROUP $INSTALL_DIR
+sudo chmod -R g+rw $INSTALL_DIR
 
 # Use second argument (node IP) to replace filler in kubeadm configuration
 sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
@@ -288,14 +329,10 @@ if [ "$5" = "False" ]; then
     exit 0
 fi
 
-# Exit early if num invokers exceeds number of nodes
-if [ $3 -lt $6 ] ; then
-    printf "%s: %s\n" "$(date +"%T.%N")" "Error - number of invokers exceeds number of nodes."
-    exit -1
-fi
-
 # Prepare cluster to deploy OpenWhisk, takes IP and node num and num invokers
-prepare_for_openwhisk $2 $3 $6
+prepare_for_openwhisk $2
 
 # Deploy OpenWhisk via Helm
 deploy_openwhisk $2
+
+printf "%s: %s\n" "$(date +"%T.%N")" "Profile setup completed!"
