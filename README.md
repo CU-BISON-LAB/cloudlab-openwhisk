@@ -16,6 +16,10 @@ Installation specific material (which is baked into the CloudLab disk image) is 
 ```
     /home/cloudlab-openwhisk
 ```
+Docker images are store in additional ephemeral cloudlab storage, mounted on each node at:
+```
+    /mydata
+```
 
 To see information on OpenWhisk pods, make sure to specify the namespace as openwhisk. To remove OpenWhisk,
 run the following commands:
@@ -44,6 +48,9 @@ If anything went wrong with the profile, check the log found at on all nodes:
 ```
     $ /home/cloudlab-openwhisk/start.log
 ```
+
+## Versioning
+Version 1 of this profile is found in the ```v1``` branch.
 
 ## Image Creation
 
