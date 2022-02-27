@@ -173,12 +173,7 @@ prepare_for_openwhisk() {
     counter=0
     while IFS= read -r line; do
 	if [ $counter -lt $CORE_NODES ] ; then
-	    kubectl label nodes ${line:5} openwhisk-role=core
-            if [ $? -ne 0 ]; then
-                echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
-                exit -1
-            fi
-	    printf "%s: %s\n" "$(date +"%T.%N")" "Labelled ${line:5} as openwhisk core node"
+	    printf "%s: %s\n" "$(date +"%T.%N")" "Skipped labelling non-invoker node ${line:5}"
         else
             kubectl label nodes ${line:5} openwhisk-role=invoker
             if [ $? -ne 0 ]; then
