@@ -267,9 +267,9 @@ fi
 disable_swap
 
 # Use mountpoint (if it exists) to set up additional docker image storage
-if test -d "/mydata"; then
-    configure_docker_storage
-fi
+#if test -d "/mydata"; then
+#    configure_docker_storage
+#fi
 
 # All all users to the docker group
 
