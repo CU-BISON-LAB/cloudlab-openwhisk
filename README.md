@@ -31,6 +31,7 @@ run the following commands:
 
 To start OpenWhisk again, run:
 ```
+    $ kubectl create namespace openwhisk
     $ cd /home/cloudlab-openwhisk/openwhisk-deploy-kube
     $ helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml
 ```
