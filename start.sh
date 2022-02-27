@@ -209,6 +209,7 @@ prepare_for_openwhisk() {
 
 
 deploy_openwhisk() {
+    # Takes cluster IP as argument to set up wskprops files.
 
     # Deploy openwhisk via helm
     printf "%s: %s\n" "$(date +"%T.%N")" "About to deploy OpenWhisk via Helm... "
@@ -337,6 +338,7 @@ fi
 prepare_for_openwhisk $2 $3 $6 $7
 
 # Deploy OpenWhisk via Helm
-deploy_openwhisk
+# Takes cluster IP
+deploy_openwhisk $1
 
 printf "%s: %s\n" "$(date +"%T.%N")" "Profile setup completed!"
