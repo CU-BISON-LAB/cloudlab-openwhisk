@@ -199,7 +199,14 @@ prepare_for_openwhisk() {
     sed -i.bak "s/REPLACE_ME_WITH_INVOKER_COUNT/$3/g" $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
     sudo chown $USER:$PROFILE_GROUP $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
     sudo chmod -R g+rw $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml
-    printf "%s: %s\n" "$(date +"%T.%N")" "Added actual primary node IP to $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml"
+    printf "%s: %s\n" "$(date +"%T.%N")" "Updated $INSTALL_DIR/openwhisk-deploy-kube/mycluster.yaml"
+    
+    if [ $4 == "docker" ] ; then
+        if test -d "/mydata"; then
+	    sed -i.bak "s/\/var\/lib\/docker\/containers/\/mydata\/docker\/containers/g" $INSTALL_DIR/openwhisk-deploy-kube/helm/openwhisk/templates/_invoker-helpers.tpl
+            printf "%s: %s\n" "$(date +"%T.%N")" "Updated dockerrootdir to /mydata/docker/containers in $INSTALL_DIR/openwhisk-deploy-kube/helm/openwhisk/templates/_invoker-helpers.tpl"
+        fi
+    fi
 }
 
 
@@ -267,9 +274,9 @@ fi
 disable_swap
 
 # Use mountpoint (if it exists) to set up additional docker image storage
-#if test -d "/mydata"; then
-#    configure_docker_storage
-#fi
+if test -d "/mydata"; then
+    configure_docker_storage
+fi
 
 # All all users to the docker group
 
