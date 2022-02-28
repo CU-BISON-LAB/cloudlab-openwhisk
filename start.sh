@@ -334,6 +334,6 @@ prepare_for_openwhisk $2 $3 $6 $7
 
 # Deploy OpenWhisk via Helm
 # Takes cluster IP
-deploy_openwhisk $1
+deploy_openwhisk $2
 
 printf "%s: %s\n" "$(date +"%T.%N")" "Profile setup completed!"
