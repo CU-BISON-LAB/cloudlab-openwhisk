@@ -10,4 +10,6 @@ nginx:
   httpsNodePort: 31001
 invoker:
   containerFactory:
-    impl: "kubernetes"
+    impl: "REPLACE_ME_WITH_INVOKER_ENGINE"
+    REPLACE_ME_WITH_INVOKER_ENGINE: 
+      replicaCount: REPLACE_ME_WITH_INVOKER_COUNT

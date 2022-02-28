@@ -31,6 +31,7 @@ run the following commands:
 
 To start OpenWhisk again, run:
 ```
+    $ kubectl create namespace openwhisk
     $ cd /home/cloudlab-openwhisk/openwhisk-deploy-kube
     $ helm install owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml
 ```
@@ -51,6 +52,11 @@ If anything went wrong with the profile, check the log found at on all nodes:
 
 ## Versioning
 Version 1 of this profile is found in the ```v1``` branch.
+
+Version 2 of this profile is found in the ```v2``` branch (and main).
+* Includes bug fixed from version 1 regarding extra storage in /mydata
+* Fixes permissions in /home/ directories
+* Removes need to run start script after first login to populate environment variables
 
 ## Image Creation
 

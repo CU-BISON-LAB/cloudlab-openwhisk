@@ -51,6 +51,22 @@ pc.defineParameter("tempFileSystemSize",
                    "The images provided by the system have small root partitions, so use this option " +
                    "if you expect you will need more space to build your software packages or store " +
                    "temporary files. 0 GB indicates maximum size.")
+pc.defineParameter("numInvokers",
+                   "Number of Invokers",
+                   portal.ParameterType.INTEGER,
+                   1,
+                   advanced=True,
+                   longDescription="Number of OpenWhisk invokers set in the mycluster.yaml file, and number of nodes labelled as Openwhisk invokers. " \
+                           "All nodes which are not invokers will be labelled as OpenWhisk core nodes.")
+pc.defineParameter("invokerEngine",
+                   "Invoker Engine",
+                   portal.ParameterType.STRING,
+                   "kubernetes",
+                   advanced=True,
+                   legalValues=[('kubernetes', 'Kubernetes Container Engine'), ('docker', 'Docker Container Engine')],
+                   longDescription="Controls how the OpenWhisk invoker creates containers. Using docker indicates that you need one invoker per invoker " \
+                           "node and the use of extra storage (temporary file system), since all runtime docker images are preloaded on each invoker " \
+                           "node when OpenWhisk is deployed.")
 params = pc.bindParameters()
 
 # Verify parameters
@@ -97,8 +113,8 @@ for i, node in enumerate(nodes[1:]):
       BASE_IP, i + 2, params.startKubernetes)))
 
 # Start primary node
-nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary {}.1 {} {} {} > /home/cloudlab-openwhisk/start.log 2>&1".format(
-  BASE_IP, params.nodeCount, params.startKubernetes, params.deployOpenWhisk)))
+nodes[0].addService(rspec.Execute(shell="bash", command="/local/repository/start.sh primary {}.1 {} {} {} {} {} > /home/cloudlab-openwhisk/start.log 2>&1".format(
+  BASE_IP, params.nodeCount, params.startKubernetes, params.deployOpenWhisk, params.numInvokers, params.invokerEngine)))
 
 
 pc.printRequestRSpec()
