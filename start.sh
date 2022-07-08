@@ -142,6 +142,11 @@ add_cluster_nodes() {
 }
 
 prepare_for_openwhisk() {
+    # Use newest version of openwhisk-deploy-kube
+    pushd $INSTALL_DIR/openwhisk-deploy-kube
+    git pull
+    popd
+    
     # Iterate over each node and set the openwhisk role
     # From https://superuser.com/questions/284187/bash-iterating-over-lines-in-a-variable
 
