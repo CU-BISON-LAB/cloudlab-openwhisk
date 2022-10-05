@@ -51,12 +51,18 @@ If anything went wrong with the profile, check the log found at on all nodes:
 ```
 
 ## Versioning
-Version 1 of this profile is found in the ```v1``` branch.
 
-Version 2 of this profile is found in the ```v2``` branch (and main).
+Version 3 of this profile is found in the ```v3``` branch (and main).
+* Can toggle deployment of the new scheduler
+* Moved openwhisk options from advanced to regular
+
+Version 2 of this profile is found in the ```v2``` branch.
 * Includes bug fixed from version 1 regarding extra storage in /mydata
 * Fixes permissions in /home/ directories
 * Removes need to run start script after first login to populate environment variables
+* Includes fixes from npm dependency error
+
+Version 1 of this profile is found in the ```v1``` branch.
 
 ## Image Creation
 
