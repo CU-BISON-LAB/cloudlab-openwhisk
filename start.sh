@@ -104,7 +104,7 @@ apply_calico() {
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Loaded helm calico repo"
 
-    helm install calico projectcalico/tigera-operator --version v3.22.0 >> $INSTALL_DIR/calico_install.log 2>&1
+    helm install calico projectcalico/tigera-operator --version v3.24.1 >> $INSTALL_DIR/calico_install.log 2>&1
     if [ $? -ne 0 ]; then
        echo "***Error: Error when installing calico with helm. Log appended to $INSTALL_DIR/calico_install.log"
        exit 1
