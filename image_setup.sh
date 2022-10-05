@@ -7,6 +7,8 @@ INSTALL_DIR=/home/cloudlab-openwhisk
 
 # Openwhisk build dependencies
 sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get autoremove -y
 sudo apt install -y nodejs npm default-jre default-jdk
 
 # In order to use wskdev commands, need to run this:
@@ -75,3 +77,8 @@ sudo chmod -R o+rw $INSTALL_DIR
 
 # Download openwhisk-deploy-kube repo - customized to this deployment
 git clone https://github.com/apache/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube
+
+# Got from similar issue here: https://github.com/containerd/containerd/issues/4581
+sudo rm /etc/containerd/config.toml
+sudo systemctl restart containerd 
+
