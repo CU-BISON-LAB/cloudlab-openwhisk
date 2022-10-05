@@ -164,8 +164,9 @@ add_cluster_nodes() {
 }
 
 prepare_for_openwhisk() {
-    # Args: 1 = IP, 2 = num nodes, 3 = num invokers, 4 = invoker engine
+    # Args: 1 = IP, 2 = num nodes, 3 = num invokers, 4 = invoker engine, 5 = scheduler enabled
 
+    # Use latest version of openwhisk-deploy-kube
     pushd $INSTALL_DIR/openwhisk-deploy-kube
     git pull
     popd
