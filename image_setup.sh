@@ -5,18 +5,23 @@ set -x
 OW_USER_GROUP=owuser
 INSTALL_DIR=/home/cloudlab-openwhisk
 
+# General updates
+sudo apt update
+sudo apt upgrade -y
+sudo apt autoremove -y
+
 # Openwhisk build dependencies
-sudo apt-get update
-sudo apt-get upgrade -y
-sudo apt-get autoremove -y
 sudo apt install -y nodejs npm default-jre default-jdk
 
 # In order to use wskdev commands, need to run this:
 sudo apt install -y python
 
+# Pip is useful
+sudo apt install -y python3-pip
+python3 -m pip install --upgrade pip
+
 # Install docker (https://docs.docker.com/engine/install/ubuntu/)
-sudo apt-get update
-sudo apt-get install -y \
+sudo apt install -y \
     ca-certificates \
     curl \
     gnupg \
@@ -25,8 +30,9 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o 
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io
+
 # Set to use cgroupdriver
 echo -e '{
   "exec-opts": ["native.cgroupdriver=systemd"],
@@ -40,24 +46,14 @@ sudo systemctl restart docker || (echo "ERROR: Docker installation failed, exiti
 sudo docker run hello-world | grep "Hello from Docker!" || (echo "ERROR: Docker installation failed, exiting." && exit -1)
 
 # Install Kubernetes
-sudo apt-get update
 sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt update
+sudo apt install -y kubelet kubeadm kubectl
 
 # Set to use private IP
 sudo sed -i.bak "s/KUBELET_CONFIG_ARGS=--config=\/var\/lib\/kubelet\/config\.yaml/KUBELET_CONFIG_ARGS=--config=\/var\/lib\/kubelet\/config\.yaml --node-ip=REPLACE_ME_WITH_IP/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-sudo sed '6 i Environment="cgroup-driver=systemd/cgroup-driver=cgroupfs"' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-
-# Install Python3, just because
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt update -y
-sudo apt install -y python3.7
-sudo apt install -y python3-pip
-python3.7 -m pip install --upgrade pip
-python3.7 -m pip install asyncio
-python3.7 -m pip install aiohttp
+sudo sed -i.bak '6 i Environment="cgroup-driver=systemd/cgroup-driver=cgroupfs"' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 # Download and install the OpenWhisk CLI
 wget https://github.com/apache/openwhisk-cli/releases/download/latest/OpenWhisk_CLI-latest-linux-386.tgz
@@ -77,6 +73,8 @@ sudo chmod -R o+rw $INSTALL_DIR
 
 # Download openwhisk-deploy-kube repo - customized to this deployment
 git clone https://github.com/apache/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube
+sudo chgrp -R $OW_USER_GROUP $INSTALL_DIR
+sudo chmod -R o+rw $INSTALL_DIR
 
 # Got from similar issue here: https://github.com/containerd/containerd/issues/4581
 sudo rm /etc/containerd/config.toml
