@@ -296,9 +296,6 @@ done
 sudo chown -R $USER:$PROFILE_GROUP $INSTALL_DIR
 sudo chmod -R g+rw $INSTALL_DIR
 
-# Use second argument (node IP) to replace filler in kubeadm configuration
-sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-
 # At this point, a secondary node is fully configured until it is time for the node to join the cluster.
 if [ $1 == $SECONDARY_ARG ] ; then
 
@@ -307,6 +304,11 @@ if [ $1 == $SECONDARY_ARG ] ; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Start Kubernetes is $3, done!"
         exit 0
     fi
+    
+    # Use second argument (node IP) to replace filler in kubeadm configuration
+    cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
     setup_secondary $2
     exit 0
@@ -324,6 +326,11 @@ if [ "$4" = "False" ]; then
     printf "%s: %s\n" "$(date +"%T.%N")" "Start Kubernetes is $4, done!"
     exit 0
 fi
+
+# Use second argument (node IP) to replace filler in kubeadm configuration
+cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo sed -i.bak "s/REPLACE_ME_WITH_IP/$2/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 # Finish setting up the primary node
 # Argument is node_ip
