@@ -71,7 +71,7 @@ sudo mkdir $INSTALL_DIR
 sudo chgrp -R $OW_USER_GROUP $INSTALL_DIR
 sudo chmod -R o+rw $INSTALL_DIR
 
-# Download openwhisk-deploy-kube repo - customized to this deployment
+# Download openwhisk-deploy-kube repo
 git clone https://github.com/apache/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube
 sudo chgrp -R $OW_USER_GROUP $INSTALL_DIR
 sudo chmod -R o+rw $INSTALL_DIR
