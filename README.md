@@ -2,7 +2,7 @@
 
 General information for what on CloudLab profiles created via GitHub repo can be found in the example repo [here](https://github.com/emulab/my-profile) or in the CloudLab [manual](https://docs.cloudlab.us/cloudlab-manual.html)
 
-Specifically, the goal of this repo is to create a CloudLab profile that allows for one-click creation of a Kubernetes OpenWhisk deployment.
+Specifically, the goal of this repo is to create a CloudLab profile that allows for one-click creation of a Kubernetes OpenWhisk deployment for academic research.
 
 ## User Information
 
@@ -68,3 +68,7 @@ Version 1 of this profile is found in the ```v1``` branch.
 ## Image Creation
 
 The [```image_setup.sh```](image_setup.sh) script is how the image was created from the base CloudLab Ubuntu 20.04 image.
+
+## Issues and Contributions
+
+If you find any issues with this profile or have feature requests, please create an issue. We welcome contributions via PRs for features other researchers may find useful.
