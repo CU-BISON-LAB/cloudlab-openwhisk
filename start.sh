@@ -82,6 +82,9 @@ setup_primary() {
         echo "***Error: Error when running kubeadm init command. Check log found in $INSTALL_DIR/k8s_install.log."
         exit 1
     fi
+    
+    # Remove taint from master node
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
 
     # Set up kubectl for all users
     for FILE in /users/*; do
@@ -96,20 +99,27 @@ setup_primary() {
 }
 
 apply_calico() {
-    # https://projectcalico.docs.tigera.io/getting-started/kubernetes/helm
-    helm repo add projectcalico https://projectcalico.docs.tigera.io/charts > $INSTALL_DIR/calico_install.log 2>&1 
+    # https://projectcalico.docs.tigera.io/getting-started/kubernetes/self-managed-onprem/onpremises
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.2/manifests/tigera-operator.yaml > $INSTALL_DIR/calico_install.log 2>&1
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when loading helm calico repo. Log written to $INSTALL_DIR/calico_install.log"
+       echo "***Error: Error when installing the calico operator. Log written to $INSTALL_DIR/calico_install.log"
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Loaded helm calico repo"
+    printf "%s: %s\n" "$(date +"%T.%N")" "Installed calico operator"
+    
+    curl -o $INSTALL_DIR/custom-resources.yaml https://raw.githubusercontent.com/projectcalico/calico/v3.24.2/manifests/custom-resources.yaml >> $INSTALL_DIR/calico_install.log 2>&1
+    if [ $? -ne 0 ]; then
+       echo "***Error: Error when fetching calico custom resource. Log appended to $INSTALL_DIR/calico_install.log"
+       exit 1
+    fi
+    printf "%s: %s\n" "$(date +"%T.%N")" "Installed calico operator"
 
-    helm install calico projectcalico/tigera-operator --version v3.24.2 >> $INSTALL_DIR/calico_install.log 2>&1
+    kubectl create -f $INSTALL_DIR/custom-resources.yaml >> $INSTALL_DIR/calico_install.log 2>&1
     if [ $? -ne 0 ]; then
-       echo "***Error: Error when installing calico with helm. Log appended to $INSTALL_DIR/calico_install.log"
+       echo "***Error: Error when installing calico manifest. Log appended to $INSTALL_DIR/calico_install.log"
        exit 1
     fi
-    printf "%s: %s\n" "$(date +"%T.%N")" "Applied Calico networking from "
+    printf "%s: %s\n" "$(date +"%T.%N")" "Applied calico networking"
 
     # wait for calico pods to be in ready state
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for calico pods to have status of 'Running': "
