@@ -104,7 +104,7 @@ apply_calico() {
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Loaded helm calico repo"
 
-    helm install calico projectcalico/tigera-operator --version v3.22.0 >> $INSTALL_DIR/calico_install.log 2>&1
+    helm install calico projectcalico/tigera-operator --version v3.24.0 >> $INSTALL_DIR/calico_install.log 2>&1
     if [ $? -ne 0 ]; then
        echo "***Error: Error when installing calico with helm. Log appended to $INSTALL_DIR/calico_install.log"
        exit 1
@@ -123,7 +123,21 @@ apply_calico() {
         NUM_RUNNING=$(kubectl get pods -n calico-system | grep " Running" | wc -l)
         NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
     done
-    printf "%s: %s\n" "$(date +"%T.%N")" "Calico running!"
+    printf "%s: %s\n" "$(date +"%T.%N")" "Calico pods running!"
+    
+    # wait for kube-system pods to be in ready state
+    printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for all system pods to have status of 'Running': "
+    NUM_PODS=$(kubectl get pods -n kube-system | wc -l)
+    NUM_RUNNING=$(kubectl get pods -n kube-system | grep " Running" | wc -l)
+    NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
+    while [ "$NUM_RUNNING" -ne 0 ]
+    do
+        sleep 1
+        printf "."
+        NUM_RUNNING=$(kubectl get pods -n kube-system | grep " Running" | wc -l)
+        NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
+    done
+    printf "%s: %s\n" "$(date +"%T.%N")" "Kubernetes system pods running!"
 }
 
 add_cluster_nodes() {
