@@ -74,7 +74,7 @@ setup_secondary() {
 setup_primary() {
     # initialize k8 primary node
     printf "%s: %s\n" "$(date +"%T.%N")" "Starting Kubernetes... (this can take several minutes)... "
-    sudo kubeadm init --apiserver-advertise-address=$1 --pod-network-cidr=10.11.0.0/16 > $INSTALL_DIR/k8s_install.log 2>&1
+    sudo kubeadm init --apiserver-advertise-address=$1 > $INSTALL_DIR/k8s_install.log 2>&1
     if [ $? -eq 0 ]; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Done! Output in $INSTALL_DIR/k8s_install.log"
     else
@@ -82,9 +82,6 @@ setup_primary() {
         echo "***Error: Error when running kubeadm init command. Check log found in $INSTALL_DIR/k8s_install.log."
         exit 1
     fi
-    
-    # Remove taint from master node
-    kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
 
     # Set up kubectl for all users
     for FILE in /users/*; do
@@ -120,6 +117,9 @@ apply_calico() {
        exit 1
     fi
     printf "%s: %s\n" "$(date +"%T.%N")" "Applied calico networking"
+    
+    # Remove taint from master node
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
 
     # wait for calico pods to be in ready state
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for calico pods to have status of 'Running': "
