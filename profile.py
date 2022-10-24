@@ -21,9 +21,9 @@ IMAGE = 'urn:publicid:IDN+utah.cloudlab.us+image+cu-bison-lab-PG0:openwhiskv3:3'
 # Set up parameters
 pc = portal.Context()
 pc.defineParameter("nodeCount", 
-                   "Number of nodes in the experiment. It is recommended that at least 3-4 be used.",
+                   "Number of nodes in the experiment. It is recommended that at least 3 be used.",
                    portal.ParameterType.INTEGER, 
-                   4)
+                   3)
 pc.defineParameter("nodeType", 
                    "Node Hardware Type",
                    portal.ParameterType.NODETYPE, 
